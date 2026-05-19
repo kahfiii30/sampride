@@ -5,8 +5,10 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { useAuth } from '../context/AuthContext';
 
 export default function MasterAkun() {
+  const { role } = useAuth();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -138,9 +140,11 @@ export default function MasterAkun() {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Master Akun / Media</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Kelola daftar akun yang akan di-tracking kontennya.</p>
         </div>
-        <Button onClick={openNew} className="flex items-center gap-1.5">
-          <Plus size={16} /> Tambah Akun
-        </Button>
+        {role === 'admin' && (
+          <Button onClick={openNew} className="flex items-center gap-1.5">
+            <Plus size={16} /> Tambah Akun
+          </Button>
+        )}
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden dark:border-slate-800 dark:bg-slate-900">
@@ -182,8 +186,9 @@ export default function MasterAkun() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <button 
-                          onClick={() => toggleStatus(acc.id, acc.is_active)}
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${acc.is_active ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400' : 'bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400'} cursor-pointer transition-colors border-none`}
+                          onClick={() => role === 'admin' && toggleStatus(acc.id, acc.is_active)}
+                          disabled={role === 'viewer'}
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${acc.is_active ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400' : 'bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400'} transition-colors border-none ${role === 'viewer' ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}
                         >
                           <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${acc.is_active ? 'bg-green-500' : 'bg-red-500'}`}></span>
                           {acc.is_active ? 'Aktif' : 'Nonaktif'}
@@ -191,20 +196,26 @@ export default function MasterAkun() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end gap-2">
-                          <button 
-                            onClick={() => openEdit(acc)} 
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-350 dark:hover:bg-slate-800 transition-colors" 
-                            title="Edit"
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                          <button 
-                            onClick={() => handleDelete(acc.id)} 
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-100 bg-red-50 text-red-600 hover:bg-red-100 dark:border-red-950/20 dark:bg-red-950/20 dark:text-red-400 dark:hover:bg-red-900/40 transition-colors" 
-                            title="Hapus"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          {role === 'admin' ? (
+                            <>
+                              <button 
+                                onClick={() => openEdit(acc)} 
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-350 dark:hover:bg-slate-800 transition-colors" 
+                                title="Edit"
+                              >
+                                <Edit2 size={14} />
+                              </button>
+                              <button 
+                                onClick={() => handleDelete(acc.id)} 
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-100 bg-red-50 text-red-600 hover:bg-red-100 dark:border-red-950/20 dark:bg-red-950/20 dark:text-red-400 dark:hover:bg-red-900/40 transition-colors" 
+                                title="Hapus"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">Hanya lihat</span>
+                          )}
                         </div>
                       </td>
                     </tr>

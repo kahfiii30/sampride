@@ -5,8 +5,10 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { useAuth } from '../context/AuthContext';
 
 export default function ChecklistHarian() {
+  const { role } = useAuth();
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [checklists, setChecklists] = useState<Record<string, DailyChecklist>>({});
@@ -124,9 +126,11 @@ export default function ChecklistHarian() {
             value={date} 
             onChange={e => setDate(e.target.value)} 
           />
-          <Button variant="secondary" onClick={triggerGenerateChecklist}>
-            Generate Checklist
-          </Button>
+          {role === 'admin' && (
+            <Button variant="secondary" onClick={triggerGenerateChecklist}>
+              Generate Checklist
+            </Button>
+          )}
         </div>
       </div>
 
@@ -170,7 +174,7 @@ export default function ChecklistHarian() {
                             <input 
                               type="checkbox" 
                               checked={!!cl[f.key]} 
-                              disabled={!isRequired}
+                              disabled={!isRequired || role === 'viewer'}
                               onChange={e => handleCheck(acc.id, f.key, e.target.checked)}
                               className={`h-5 w-5 rounded border-slate-350 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed`}
                             />

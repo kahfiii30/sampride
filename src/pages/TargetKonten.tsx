@@ -8,8 +8,10 @@ import { Modal } from '../components/ui/Modal';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { useAuth } from '../context/AuthContext';
 
 export default function TargetKonten() {
+  const { role } = useAuth();
   const [baTargets, setBaTargets] = useState<ContentBATarget[]>([]);
   const [latestUpdates, setLatestUpdates] = useState<Record<string, ContentBADailyUpdate>>({});
   const [loading, setLoading] = useState(true);
@@ -172,9 +174,11 @@ export default function TargetKonten() {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Target Konten BA</h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1">Tracking target bulanan dan realisasi harian BA / Content Creator.</p>
         </div>
-        <Button onClick={openAddBAModal} className="flex items-center gap-1.5">
-          <Plus size={18} /> Tambah BA
-        </Button>
+        {role === 'admin' && (
+          <Button onClick={openAddBAModal} className="flex items-center gap-1.5">
+            <Plus size={18} /> Tambah BA
+          </Button>
+        )}
       </div>
 
       <div className="grid w-full grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
@@ -230,18 +234,24 @@ export default function TargetKonten() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
-                  <Button variant="primary" size="sm" onClick={() => openUpdateModal(ba.id, completed)}>
-                    Update
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={() => openHistory(ba.id, ba.nama_ba)}>
+                  {role === 'admin' && (
+                    <Button variant="primary" size="sm" onClick={() => openUpdateModal(ba.id, completed)}>
+                      Update
+                    </Button>
+                  )}
+                  <Button variant="secondary" size="sm" onClick={() => openHistory(ba.id, ba.nama_ba)} className={role === 'viewer' ? 'col-span-2' : ''}>
                     <Calendar size={13} /> History
                   </Button>
-                  <Button variant="secondary" size="sm" onClick={() => openEditBA(ba)}>
-                    <Edit size={13} /> Target / Nama
-                  </Button>
-                  <Button variant="danger" size="sm" onClick={() => handleDeleteBA(ba.id)}>
-                    <Trash2 size={13} /> Hapus
-                  </Button>
+                  {role === 'admin' && (
+                    <>
+                      <Button variant="secondary" size="sm" onClick={() => openEditBA(ba)}>
+                        <Edit size={13} /> Target / Nama
+                      </Button>
+                      <Button variant="danger" size="sm" onClick={() => handleDeleteBA(ba.id)}>
+                        <Trash2 size={13} /> Hapus
+                      </Button>
+                    </>
+                  )}
                 </div>
               </Card>
             );

@@ -8,9 +8,14 @@ import ChecklistHarian from './pages/ChecklistHarian';
 import TargetKonten from './pages/TargetKonten';
 import RekapBulanan from './pages/RekapBulanan';
 import MasterAkun from './pages/MasterAkun';
+import Login from './pages/Login';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { LogOut } from 'lucide-react';
+import { ConfirmModal } from './components/ui/ConfirmModal';
 
 function Sidebar({ isOpen, toggleSidebar }: { isOpen: boolean, toggleSidebar: () => void }) {
   const location = useLocation();
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   
   const navItems = [
     { path: '/', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
@@ -29,7 +34,7 @@ function Sidebar({ isOpen, toggleSidebar }: { isOpen: boolean, toggleSidebar: ()
         <h1 className="text-xl font-bold">ContentTracker</h1>
       </div>
       
-      <nav className="flex flex-col gap-2">
+      <nav className="flex flex-col gap-2 flex-1">
         {navItems.map(item => (
           <Link 
             key={item.path} 
@@ -42,11 +47,35 @@ function Sidebar({ isOpen, toggleSidebar }: { isOpen: boolean, toggleSidebar: ()
           </Link>
         ))}
       </nav>
+
+      <div className="mt-auto pt-6 border-t border-slate-200 dark:border-slate-800">
+        <button 
+          onClick={() => setIsLogoutModalOpen(true)}
+          className="sidebar-link w-full text-left text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
+        >
+          <LogOut size={20} />
+          Keluar
+        </button>
+      </div>
+
+      <ConfirmModal 
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={() => {
+          localStorage.removeItem('app_role');
+          window.location.href = '/';
+        }}
+        title="Keluar dari Aplikasi"
+        description="Apakah Anda yakin ingin keluar? Anda harus memasukkan PIN lagi jika ingin masuk sebagai Admin."
+        confirmText="Ya, Keluar"
+        cancelText="Batal"
+        variant="warning"
+      />
     </div>
   );
 }
 
-function App() {
+function MainApp() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -55,6 +84,8 @@ function App() {
     }
     return false;
   });
+  
+  const { role } = useAuth();
 
   useEffect(() => {
     if (isDarkMode) {
@@ -65,6 +96,10 @@ function App() {
       localStorage.setItem('theme', 'light');
     }
   }, [isDarkMode]);
+
+  if (!role) {
+    return <Login />;
+  }
 
   return (
     <Router>
@@ -101,4 +136,10 @@ function App() {
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <AuthProvider>
+      <MainApp />
+    </AuthProvider>
+  );
+}
