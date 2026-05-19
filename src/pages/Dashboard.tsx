@@ -30,23 +30,21 @@ export default function Dashboard() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch Accounts
-      const { data: accData } = await supabase
-        .from('content_accounts')
-        .select('id, req_slide_2, req_caption, req_story, req_reels')
-        .eq('is_active', true);
-      const totalAccounts = accData?.length || 0;
-
-      // Daily Checklists (for current month)
       const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
       const daysInMonth = getDaysInMonth(new Date(year, month - 1));
       const endDate = `${year}-${String(month).padStart(2, '0')}-${daysInMonth}`;
 
-      const { data: checkData } = await supabase
-        .from('daily_checklists')
-        .select('*')
-        .gte('checklist_date', startDate)
-        .lte('checklist_date', endDate);
+      // Run queries concurrently
+      const [accResponse, checkResponse, baTargetsResponse, baUpdatesResponse] = await Promise.all([
+        supabase.from('content_accounts').select('id, req_slide_2, req_caption, req_story, req_reels, created_at').eq('is_active', true),
+        supabase.from('daily_checklists').select('*').gte('checklist_date', startDate).lte('checklist_date', endDate),
+        supabase.from('content_ba_targets').select('*'),
+        supabase.from('content_ba_daily_updates').select('*').order('tanggal', { ascending: false })
+      ]);
+
+      const accData = accResponse.data;
+      const totalAccounts = accData?.length || 0;
+      const checkData = checkResponse.data;
       const today = new Date();
       const isCurrentMonth = today.getFullYear() === year && (today.getMonth() + 1) === month;
       const isPastMonth = year < today.getFullYear() || (year === today.getFullYear() && (month < today.getMonth() + 1));
@@ -54,6 +52,14 @@ export default function Dashboard() {
 
       let totalChecklistWajib = 0;
       let totalChecklistSelesai = 0;
+
+      const checkMap = new Map();
+      if (checkData) {
+        checkData.forEach(c => {
+          if (!checkMap.has(c.account_id)) checkMap.set(c.account_id, []);
+          checkMap.get(c.account_id).push(c);
+        });
+      }
 
       const accMap = new Map();
       if (accData) {
@@ -64,6 +70,23 @@ export default function Dashboard() {
           if (a.req_caption) countReq++;
           if (a.req_story) countReq++;
           if (a.req_reels) countReq++;
+          
+          let daysToCount = isCurrentMonth ? today.getDate() : (isPastMonth ? daysInMonth : 0);
+          if (a.created_at) {
+            const createdAt = new Date(a.created_at);
+            if (createdAt.getFullYear() === year && (createdAt.getMonth() + 1) === month) {
+              const startDay = createdAt.getDate();
+              const endDay = isCurrentMonth ? today.getDate() : daysInMonth;
+              daysToCount = Math.max(0, endDay - startDay + 1);
+            } else if (createdAt.getFullYear() > year || (createdAt.getFullYear() === year && (createdAt.getMonth() + 1) > month)) {
+              daysToCount = 0;
+            }
+          }
+          
+          const cls = checkMap.get(a.id) || [];
+          const totalHariTerisi = cls.length;
+          
+          daysToCount = Math.max(daysToCount, totalHariTerisi);
           totalChecklistWajib += daysToCount * countReq;
         });
       }
@@ -82,17 +105,8 @@ export default function Dashboard() {
 
       const totalChecklistBolong = Math.max(totalChecklistWajib - totalChecklistSelesai, 0);
 
-      // Targets (BA Content targets are on content_ba_targets)
-      // Wait, let's use content_ba_targets for brand ambassador tracking
-      const { data: baTargetsData } = await supabase
-        .from('content_ba_targets')
-        .select('*');
-
-      // Daily updates
-      const { data: baUpdatesData } = await supabase
-        .from('content_ba_daily_updates')
-        .select('*')
-        .order('tanggal', { ascending: false });
+      const baTargetsData = baTargetsResponse.data;
+      const baUpdatesData = baUpdatesResponse.data;
 
       let totalTargetKonten = 0;
       let totalKontenSelesai = 0;

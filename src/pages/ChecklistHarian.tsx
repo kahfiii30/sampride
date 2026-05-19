@@ -20,28 +20,24 @@ export default function ChecklistHarian() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch active accounts
-      const { data: accData } = await supabase
-        .from('content_accounts')
-        .select('*')
-        .eq('is_active', true)
-        .order('name');
+      // Run queries concurrently
+      const [accResponse, checkResponse] = await Promise.all([
+        supabase.from('content_accounts').select('*').eq('is_active', true).order('name'),
+        supabase.from('daily_checklists').select('*').eq('checklist_date', date)
+      ]);
       
+      const accData = accResponse.data;
+      const checkData = checkResponse.data;
+
       if (accData) setAccounts(accData);
-
-      // Fetch checklists for the date
-      const { data: checkData } = await supabase
-        .from('daily_checklists')
-        .select('*')
-        .eq('checklist_date', date);
-
+      
+      const checkMap: Record<string, DailyChecklist> = {};
       if (checkData) {
-        const checkMap: Record<string, DailyChecklist> = {};
         checkData.forEach(item => {
           checkMap[item.account_id] = item;
         });
-        setChecklists(checkMap);
       }
+      setChecklists(checkMap);
     } catch (err) {
       console.error('Error fetching checklist data:', err);
     } finally {

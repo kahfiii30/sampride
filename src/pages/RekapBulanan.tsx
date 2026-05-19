@@ -25,26 +25,24 @@ export default function RekapBulanan() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // 1. Accounts
-      const { data: accData } = await supabase
-        .from('content_accounts')
-        .select('*')
-        .eq('is_active', true)
-        .order('name');
-      if (accData) setAccounts(accData);
-
-      // Filter dates
       const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
       const daysInMonth = getDaysInMonth(new Date(year, month - 1));
       const endDate = `${year}-${String(month).padStart(2, '0')}-${daysInMonth}`;
 
-      // 2. Daily Checklists
-      const { data: checkData } = await supabase
-        .from('daily_checklists')
-        .select('*')
-        .gte('checklist_date', startDate)
-        .lte('checklist_date', endDate);
+      // Run queries concurrently
+      const [accResponse, checkResponse, baTargetsResponse, baUpdatesResponse] = await Promise.all([
+        supabase.from('content_accounts').select('*').eq('is_active', true).order('name'),
+        supabase.from('daily_checklists').select('*').gte('checklist_date', startDate).lte('checklist_date', endDate),
+        supabase.from('content_ba_targets').select('*').order('nama_ba', { ascending: true }),
+        supabase.from('content_ba_daily_updates').select('*').gte('tanggal', startDate).lte('tanggal', endDate)
+      ]);
 
+      const accData = accResponse.data;
+      const checkData = checkResponse.data;
+      const baTargetsData = baTargetsResponse.data;
+      const baUpdatesData = baUpdatesResponse.data;
+
+      if (accData) setAccounts(accData);
       const checkMap: Record<string, DailyChecklist[]> = {};
       if (checkData) {
         checkData.forEach(item => {
@@ -54,19 +52,7 @@ export default function RekapBulanan() {
       }
       setChecklistData(checkMap);
 
-      // 3. BA Targets (from content_ba_targets)
-      const { data: baTargetsData } = await supabase
-        .from('content_ba_targets')
-        .select('*')
-        .order('nama_ba', { ascending: true });
       if (baTargetsData) setBaTargets(baTargetsData);
-
-      // 4. BA Daily Updates (from content_ba_daily_updates for current month)
-      const { data: baUpdatesData } = await supabase
-        .from('content_ba_daily_updates')
-        .select('*')
-        .gte('tanggal', startDate)
-        .lte('tanggal', endDate);
       if (baUpdatesData) setBaUpdates(baUpdatesData);
     } catch (err) {
       console.error('Error fetching rekap data:', err);
@@ -118,9 +104,12 @@ export default function RekapBulanan() {
           }
         }
 
-        const totalWajib = daysToCount * reqCount;
         const cls = checklistData[acc.id] || [];
         const totalHariTerisi = cls.length;
+        
+        daysToCount = Math.max(daysToCount, totalHariTerisi);
+        const totalWajib = daysToCount * reqCount;
+
         const missingDays = Math.max(daysToCount - totalHariTerisi, 0);
 
         let checked = 0;
@@ -333,10 +322,12 @@ export default function RekapBulanan() {
                     if (acc.req_story) reqCount++;
                     if (acc.req_reels) reqCount++;
 
-                    const totalWajib = daysToCount * reqCount;
-                    
                     const cls = checklistData[acc.id] || [];
                     const totalHariTerisi = cls.length;
+                    
+                    daysToCount = Math.max(daysToCount, totalHariTerisi);
+                    const totalWajib = daysToCount * reqCount;
+                    
                     const missingDays = Math.max(daysToCount - totalHariTerisi, 0);
 
                     let checked = 0;

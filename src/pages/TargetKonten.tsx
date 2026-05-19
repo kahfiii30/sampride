@@ -43,23 +43,19 @@ export default function TargetKonten() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch BA Targets
-      const { data: baData } = await supabase
-        .from('content_ba_targets')
-        .select('*')
-        .order('created_at', { ascending: true });
+      // Run queries concurrently
+      const [baResponse, updateResponse] = await Promise.all([
+        supabase.from('content_ba_targets').select('*').order('created_at', { ascending: true }),
+        supabase.from('content_ba_daily_updates').select('*').order('tanggal', { ascending: false }).order('created_at', { ascending: false })
+      ]);
       
+      const baData = baResponse.data;
+      const updateData = updateResponse.data;
+
       if (baData) {
         setBaTargets(baData);
       }
 
-      // Fetch Latest Updates
-      const { data: updateData } = await supabase
-        .from('content_ba_daily_updates')
-        .select('*')
-        .order('tanggal', { ascending: false })
-        .order('created_at', { ascending: false });
-      
       const updateMap: Record<string, ContentBADailyUpdate> = {};
       if (updateData) {
         updateData.forEach(u => {
