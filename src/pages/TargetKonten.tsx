@@ -13,7 +13,8 @@ import { useAuth } from '../context/AuthContext';
 export default function TargetKonten() {
   const { role } = useAuth();
   const [baTargets, setBaTargets] = useState<ContentBATarget[]>([]);
-  const [latestUpdates, setLatestUpdates] = useState<Record<string, ContentBADailyUpdate>>({});
+  const [baUpdates, setBaUpdates] = useState<ContentBADailyUpdate[]>([]);
+  const [completedUpdates, setCompletedUpdates] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
   // Modals
@@ -58,15 +59,18 @@ export default function TargetKonten() {
         setBaTargets(baData);
       }
 
-      const updateMap: Record<string, ContentBADailyUpdate> = {};
       if (updateData) {
+        setBaUpdates(updateData);
+        
+        const currentMonthStr = format(new Date(), 'yyyy-MM');
+        const completedMap: Record<string, number> = {};
         updateData.forEach(u => {
-          if (!updateMap[u.ba_id]) {
-            updateMap[u.ba_id] = u; // Keep the latest one
+          if (u.tanggal.startsWith(currentMonthStr)) {
+            completedMap[u.ba_id] = (completedMap[u.ba_id] || 0) + u.realisasi;
           }
         });
+        setCompletedUpdates(completedMap);
       }
-      setLatestUpdates(updateMap);
     } catch (err) {
       console.error('Error fetching data:', err);
     } finally {
@@ -154,10 +158,18 @@ export default function TargetKonten() {
     setIsEditBAModalOpen(true);
   };
 
-  const openUpdateModal = (baId: string, currentRealisasi: number) => {
+  const handleUpdateTanggalChange = (dateStr: string) => {
+    setUpdateTanggal(dateStr);
+    const existing = baUpdates.find(u => u.ba_id === selectedBAId && u.tanggal === dateStr);
+    setUpdateRealisasi(existing ? existing.realisasi : 0);
+  };
+
+  const openUpdateModal = (baId: string) => {
     setSelectedBAId(baId);
-    setUpdateTanggal(format(new Date(), 'yyyy-MM-dd'));
-    setUpdateRealisasi(currentRealisasi);
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    setUpdateTanggal(todayStr);
+    const existing = baUpdates.find(u => u.ba_id === baId && u.tanggal === todayStr);
+    setUpdateRealisasi(existing ? existing.realisasi : 0);
     setIsUpdateModalOpen(true);
   };
 
@@ -192,7 +204,7 @@ export default function TargetKonten() {
         ) : (
           baTargets.map(ba => {
             const target = ba.target_bulanan;
-            const completed = latestUpdates[ba.id]?.realisasi || 0;
+            const completed = completedUpdates[ba.id] || 0;
             const minus = Math.max(target - completed, 0);
             const progressPct = Math.min(Math.round((completed / target) * 100), 100) || 0;
             
@@ -235,7 +247,7 @@ export default function TargetKonten() {
 
                 <div className="grid grid-cols-2 gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
                   {role === 'admin' && (
-                    <Button variant="primary" size="sm" onClick={() => openUpdateModal(ba.id, completed)}>
+                    <Button variant="primary" size="sm" onClick={() => openUpdateModal(ba.id)}>
                       Update
                     </Button>
                   )}
@@ -325,18 +337,18 @@ export default function TargetKonten() {
             label="Tanggal" 
             type="date" 
             value={updateTanggal} 
-            onChange={e => setUpdateTanggal(e.target.value)} 
+            onChange={e => handleUpdateTanggalChange(e.target.value)} 
             required 
           />
           <Input 
-            label="Total Kumulatif Realisasi" 
+            label="Realisasi Konten" 
             type="number" 
             value={updateRealisasi} 
             onChange={e => setUpdateRealisasi(parseInt(e.target.value) || 0)} 
             min={0} 
             required 
           />
-          <p className="text-xs text-slate-500 dark:text-slate-400">Isi dengan total konten yang sudah dibuat sejauh ini (bukan hanya penambahan hari ini).</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Isi dengan jumlah konten yang dibuat pada tanggal ini.</p>
           <div className="flex justify-end gap-2 border-t border-slate-100 pt-4 dark:border-slate-850">
             <Button type="button" variant="secondary" onClick={() => setIsUpdateModalOpen(false)}>
               Batal

@@ -39,7 +39,7 @@ export default function Dashboard() {
         supabase.from('content_accounts').select('id, req_slide_2, req_caption, req_story, req_reels, created_at').eq('is_active', true),
         supabase.from('daily_checklists').select('*').gte('checklist_date', startDate).lte('checklist_date', endDate),
         supabase.from('content_ba_targets').select('*'),
-        supabase.from('content_ba_daily_updates').select('*').order('tanggal', { ascending: false })
+        supabase.from('content_ba_daily_updates').select('*').gte('tanggal', startDate).lte('tanggal', endDate)
       ]);
 
       const accData = accResponse.data;
@@ -114,19 +114,17 @@ export default function Dashboard() {
       let baMinus = 0;
       let totalKekurangan = 0;
 
-      const latestUpdatesMap: Record<string, number> = {};
+      const completedUpdatesMap: Record<string, number> = {};
       if (baUpdatesData) {
         baUpdatesData.forEach(u => {
-          if (latestUpdatesMap[u.ba_id] === undefined) {
-            latestUpdatesMap[u.ba_id] = u.realisasi;
-          }
+          completedUpdatesMap[u.ba_id] = (completedUpdatesMap[u.ba_id] || 0) + u.realisasi;
         });
       }
 
       if (baTargetsData) {
         baTargetsData.forEach(ba => {
           const target = ba.target_bulanan;
-          const completed = latestUpdatesMap[ba.id] || 0;
+          const completed = completedUpdatesMap[ba.id] || 0;
           totalTargetKonten += target;
           totalKontenSelesai += completed;
 
