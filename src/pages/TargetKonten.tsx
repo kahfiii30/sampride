@@ -66,7 +66,9 @@ export default function TargetKonten() {
         const completedMap: Record<string, number> = {};
         updateData.forEach(u => {
           if (u.tanggal.startsWith(currentMonthStr)) {
-            completedMap[u.ba_id] = (completedMap[u.ba_id] || 0) + u.realisasi;
+            if (completedMap[u.ba_id] === undefined) {
+              completedMap[u.ba_id] = u.realisasi;
+            }
           }
         });
         setCompletedUpdates(completedMap);
@@ -158,18 +160,23 @@ export default function TargetKonten() {
     setIsEditBAModalOpen(true);
   };
 
+  const getRealisasiForDate = (baId: string, dateStr: string) => {
+    const latestBeforeOrOn = baUpdates.find(u => u.ba_id === baId && u.tanggal <= dateStr);
+    return latestBeforeOrOn ? latestBeforeOrOn.realisasi : 0;
+  };
+
   const handleUpdateTanggalChange = (dateStr: string) => {
     setUpdateTanggal(dateStr);
-    const existing = baUpdates.find(u => u.ba_id === selectedBAId && u.tanggal === dateStr);
-    setUpdateRealisasi(existing ? existing.realisasi : 0);
+    const val = getRealisasiForDate(selectedBAId, dateStr);
+    setUpdateRealisasi(val);
   };
 
   const openUpdateModal = (baId: string) => {
     setSelectedBAId(baId);
     const todayStr = format(new Date(), 'yyyy-MM-dd');
     setUpdateTanggal(todayStr);
-    const existing = baUpdates.find(u => u.ba_id === baId && u.tanggal === todayStr);
-    setUpdateRealisasi(existing ? existing.realisasi : 0);
+    const val = getRealisasiForDate(baId, todayStr);
+    setUpdateRealisasi(val);
     setIsUpdateModalOpen(true);
   };
 
@@ -341,14 +348,14 @@ export default function TargetKonten() {
             required 
           />
           <Input 
-            label="Realisasi Konten" 
+            label="Total Kumulatif Realisasi" 
             type="number" 
             value={updateRealisasi} 
             onChange={e => setUpdateRealisasi(parseInt(e.target.value) || 0)} 
             min={0} 
             required 
           />
-          <p className="text-xs text-slate-500 dark:text-slate-400">Isi dengan jumlah konten yang dibuat pada tanggal ini.</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Isi dengan total konten yang sudah dibuat sejauh ini (bukan hanya penambahan hari ini).</p>
           <div className="flex justify-end gap-2 border-t border-slate-100 pt-4 dark:border-slate-850">
             <Button type="button" variant="secondary" onClick={() => setIsUpdateModalOpen(false)}>
               Batal

@@ -4,6 +4,20 @@ import { format, getMonth, getYear, getDaysInMonth } from 'date-fns';
 import { Download } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 
+const getLatestRealisasi = (updates: ContentBADailyUpdate[]) => {
+  if (updates.length === 0) return 0;
+  const latest = updates.reduce((latestVal, currentVal) => {
+    if (currentVal.tanggal > latestVal.tanggal) return currentVal;
+    if (currentVal.tanggal === latestVal.tanggal) {
+      const currentCreated = currentVal.created_at ? new Date(currentVal.created_at).getTime() : 0;
+      const latestCreated = latestVal.created_at ? new Date(latestVal.created_at).getTime() : 0;
+      return currentCreated > latestCreated ? currentVal : latestVal;
+    }
+    return latestVal;
+  });
+  return latest.realisasi;
+};
+
 export default function RekapBulanan() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [month, setMonth] = useState(getMonth(currentDate) + 1);
@@ -190,7 +204,7 @@ export default function RekapBulanan() {
       const rows = baTargets.map(ba => {
         const target = ba.target_bulanan;
         const updates = baUpdates.filter(u => u.ba_id === ba.id);
-        const completed = updates.reduce((sum, u) => sum + u.realisasi, 0);
+        const completed = getLatestRealisasi(updates);
         const diff = completed - target;
         const progressPct = Math.min(Math.round((completed / target) * 100), 100) || 0;
         const statusTarget = diff < 0 ? `Minus ${Math.abs(diff)}` : diff === 0 ? 'Tercapai' : `Over ${diff}`;
@@ -416,7 +430,7 @@ export default function RekapBulanan() {
                   baTargets.map(ba => {
                     const target = ba.target_bulanan;
                     const updates = baUpdates.filter(u => u.ba_id === ba.id);
-                    const completed = updates.reduce((sum, u) => sum + u.realisasi, 0);
+                    const completed = getLatestRealisasi(updates);
                     const diff = completed - target;
                     const progressPct = Math.min(Math.round((completed / target) * 100), 100) || 0;
 

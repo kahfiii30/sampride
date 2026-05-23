@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase, Account, DailyChecklist, BATarget, BAProgress } from '../lib/supabase';
+import { supabase, Account, DailyChecklist, BATarget, BAProgress, ContentBADailyUpdate } from '../lib/supabase';
 import { format, getMonth, getYear, getDaysInMonth } from 'date-fns';
 import { Users, CheckSquare, Target, TrendingUp, AlertCircle, Award } from 'lucide-react';
 import { Card } from '../components/ui/Card';
@@ -114,17 +114,26 @@ export default function Dashboard() {
       let baMinus = 0;
       let totalKekurangan = 0;
 
-      const completedUpdatesMap: Record<string, number> = {};
+      const latestUpdatesMap: Record<string, ContentBADailyUpdate> = {};
       if (baUpdatesData) {
         baUpdatesData.forEach(u => {
-          completedUpdatesMap[u.ba_id] = (completedUpdatesMap[u.ba_id] || 0) + u.realisasi;
+          const existing = latestUpdatesMap[u.ba_id];
+          if (!existing) {
+            latestUpdatesMap[u.ba_id] = u;
+          } else {
+            const uCreated = u.created_at ? new Date(u.created_at).getTime() : 0;
+            const existingCreated = existing.created_at ? new Date(existing.created_at).getTime() : 0;
+            if (u.tanggal > existing.tanggal || (u.tanggal === existing.tanggal && uCreated > existingCreated)) {
+              latestUpdatesMap[u.ba_id] = u;
+            }
+          }
         });
       }
 
       if (baTargetsData) {
         baTargetsData.forEach(ba => {
           const target = ba.target_bulanan;
-          const completed = completedUpdatesMap[ba.id] || 0;
+          const completed = latestUpdatesMap[ba.id]?.realisasi || 0;
           totalTargetKonten += target;
           totalKontenSelesai += completed;
 
